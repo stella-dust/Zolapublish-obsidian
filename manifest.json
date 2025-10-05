@@ -1,0 +1,10 @@
+{
+	"id": "zolapublish",
+	"name": "Zolapublish",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Manage, edit, sync and publish Zola-based blog posts from Obsidian",
+	"author": "Junyi Yan",
+	"authorUrl": "https://junyiyan.xyz",
+	"isDesktopOnly": true
+}

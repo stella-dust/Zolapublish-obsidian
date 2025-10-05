@@ -1,0 +1,28 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Build files
+# main.js - Keep tracked for releases
+*.js.map
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Claude AI
+.claude/
+.plan/
+
+# User data (should not be in source control)
+data.json

@@ -1,0 +1,429 @@
+/* Zolapublish Plugin Styles */
+
+.zolapublish-view {
+	padding: 12px;
+	height: 100%;
+	overflow-y: auto;
+}
+
+/* Top Header (Zolapublish + Log Icon) */
+.zolapublish-top-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.zolapublish-manage-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+/* Action Bar (Icon Buttons) */
+.zolapublish-action-bar {
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 0;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.zolapublish-icon-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border: none;
+	background: none;
+	color: var(--icon-color);
+	cursor: pointer;
+	transition: color 0.15s;
+	padding: 0;
+}
+
+.zolapublish-icon-btn:hover {
+	color: var(--icon-color-hover);
+}
+
+.zolapublish-icon-btn:active {
+	color: var(--icon-color-active);
+}
+
+.zolapublish-icon-btn svg {
+	width: 18px;
+	height: 18px;
+}
+
+/* Section Title */
+.zolapublish-section-title {
+	margin: 0 0 12px 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-normal);
+	transition: color 0.15s;
+}
+
+.zolapublish-section-title:hover {
+	color: var(--interactive-accent);
+}
+
+.zolapublish-log-icon {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: color 0.15s;
+}
+
+.zolapublish-log-icon:hover {
+	color: var(--text-normal);
+}
+
+.zolapublish-log-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* Logs Section */
+.zolapublish-logs-section {
+	margin-bottom: 16px;
+	padding: 12px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+/* Tags Section */
+.zolapublish-tags-section {
+	margin-top: 8px;
+}
+
+.zolapublish-section-title {
+	margin: 0 0 12px 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+/* 按钮样式 */
+.zolapublish-btn {
+	width: 100%;
+	padding: 10px 16px;
+	border: none;
+	border-radius: 6px;
+	background-color: var(--interactive-normal);
+	color: var(--text-normal);
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.zolapublish-btn:hover {
+	background-color: var(--interactive-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.zolapublish-btn:active {
+	transform: translateY(0);
+}
+
+.zolapublish-btn-primary {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.zolapublish-btn-primary:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.zolapublish-btn-success {
+	background-color: var(--color-green);
+	color: white;
+}
+
+.zolapublish-btn-success:hover {
+	opacity: 0.9;
+}
+
+/* 同步按钮容器 */
+.zolapublish-sync-buttons {
+	display: flex;
+	gap: 8px;
+}
+
+.zolapublish-sync-buttons .zolapublish-btn {
+	flex: 1;
+}
+
+/* Tag List Styles (Obsidian Native Style) */
+.zolapublish-tags-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.zolapublish-tag-item {
+	display: flex;
+	flex-direction: column;
+}
+
+.zolapublish-tag-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 8px;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background-color 0.15s;
+}
+
+.zolapublish-tag-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.zolapublish-tag-name-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+}
+
+.zolapublish-tag-name {
+	font-size: 13px;
+	color: var(--text-normal);
+}
+
+.zolapublish-tag-count {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin-right: 4px;
+}
+
+.zolapublish-tag-expand-icon {
+	font-size: 14px;
+	font-weight: 300;
+	color: var(--text-muted);
+	width: 16px;
+	text-align: center;
+	line-height: 1;
+}
+
+/* Tag Articles (Expanded) */
+.zolapublish-tag-articles {
+	padding: 2px 0 4px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.zolapublish-tag-article-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.zolapublish-tag-article-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.zolapublish-tag-article-title {
+	flex: 1;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.zolapublish-tag-article-date {
+	font-size: 11px;
+	color: var(--text-faint);
+	font-family: var(--font-monospace);
+}
+
+.zolapublish-draft-badge-small {
+	padding: 1px 4px;
+	background-color: var(--background-modifier-border);
+	color: var(--text-muted);
+	border-radius: 3px;
+	font-size: 9px;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+/* 日志列表样式 */
+.zolapublish-logs-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.zolapublish-log-item {
+	display: flex;
+	flex-direction: column;
+	border-radius: 4px;
+}
+
+.zolapublish-log-header {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background-color 0.15s;
+}
+
+.zolapublish-log-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.zolapublish-log-time-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.zolapublish-log-timestamp {
+	font-size: 11px;
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+}
+
+.zolapublish-log-expand-icon {
+	font-size: 14px;
+	font-weight: 300;
+	color: var(--text-muted);
+	width: 16px;
+	text-align: center;
+	line-height: 1;
+}
+
+.zolapublish-log-summary {
+	font-size: 13px;
+	color: var(--text-normal);
+	font-weight: 500;
+	padding-left: 0;
+}
+
+.zolapublish-log-details {
+	padding: 4px 8px 8px 20px;
+	font-size: 12px;
+	color: var(--text-muted);
+	line-height: 1.6;
+}
+
+/* 按钮组样式 */
+.zolapublish-btn-group {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+/* 文章列表样式 */
+.zolapublish-articles-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.zolapublish-article-item {
+	padding: 12px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s;
+	border-left: 3px solid transparent;
+}
+
+.zolapublish-article-item:hover {
+	background-color: var(--background-modifier-hover);
+	border-left-color: var(--interactive-accent);
+	transform: translateX(2px);
+}
+
+.zolapublish-article-info {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.zolapublish-article-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.zolapublish-draft-badge {
+	display: inline-flex;
+	padding: 2px 8px;
+	background-color: var(--text-muted);
+	color: var(--text-on-accent);
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.zolapublish-article-meta {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.zolapublish-article-date {
+	font-family: var(--font-monospace);
+}
+
+.zolapublish-article-tags {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.zolapublish-tag-badge {
+	padding: 2px 6px;
+	background-color: var(--background-modifier-border);
+	border-radius: 4px;
+	font-size: 11px;
+	color: var(--text-accent);
+}
+
+/* 加载和空状态 */
+.zolapublish-loading,
+.zolapublish-empty-state,
+.zolapublish-error-state {
+	padding: 20px;
+	text-align: center;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+.zolapublish-error-state {
+	color: var(--text-error);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+	.zolapublish-tab-bar {
+		flex-wrap: wrap;
+	}
+
+	.zolapublish-sync-buttons {
+		flex-direction: column;
+	}
+}
