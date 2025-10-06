@@ -150,24 +150,17 @@ export class SyncManager {
 		// Build target path
 		const targetPath = path.join(zolaProjectPath, fileName);
 
-		console.log(`Preparing to sync file: ${fileName} -> ${targetPath}`);
-
 		// Check if file already exists to avoid duplicate writes
 		if (fs.existsSync(targetPath)) {
 			// Read existing file content, skip if content is the same
 			const existingContent = fs.readFileSync(targetPath, 'utf-8');
 			if (existingContent === content) {
-				console.log(`File unchanged, skipping: ${fileName}`);
 				return;
 			}
-			console.log(`File changed, updating: ${fileName}`);
-		} else {
-			console.log(`New file, creating: ${fileName}`);
 		}
 
 		// Write file
 		fs.writeFileSync(targetPath, content, 'utf-8');
-		console.log(`✓ Synced: ${fileName}`);
 	}
 
 	/**
@@ -188,11 +181,7 @@ export class SyncManager {
 			}
 
 			// Convert to Markdown standard format
-			const zolaFormat = `![](${cleanPath})`;
-
-			console.log(`Converting image link: ${match} -> ${zolaFormat}`);
-
-			return zolaFormat;
+			return `![](${cleanPath})`;
 		});
 
 		return converted;
@@ -215,9 +204,9 @@ export class SyncManager {
 		// Check if file already exists
 		const existingFile = this.app.vault.getAbstractFileByPath(targetPath);
 
-		if (existingFile) {
+		if (existingFile instanceof TFile) {
 			// File exists, update content
-			await this.app.vault.modify(existingFile as TFile, content);
+			await this.app.vault.modify(existingFile, content);
 		} else {
 			// File doesn't exist, create new file
 			await this.app.vault.create(targetPath, content);
@@ -237,11 +226,7 @@ export class SyncManager {
 			if (imagePath.startsWith('/')) {
 				// Remove leading /, add ../
 				const obsidianPath = '../' + imagePath.substring(1);
-				const obsidianFormat = `![[${obsidianPath}]]`;
-
-				console.log(`Converting image link: ${match} -> ${obsidianFormat}`);
-
-				return obsidianFormat;
+				return `![[${obsidianPath}]]`;
 			}
 
 			// Keep other formats unchanged
@@ -258,7 +243,6 @@ export class SyncManager {
 		const files: string[] = [];
 
 		if (!fs.existsSync(zolaPath)) {
-			console.log(`Zola path does not exist: ${zolaPath}`);
 			return files;
 		}
 
@@ -272,13 +256,11 @@ export class SyncManager {
 
 			// Skip hidden files
 			if (entry.startsWith('.')) {
-				console.log(`Skipping hidden file: ${entry}`);
 				continue;
 			}
 
 			// Skip system files
 			if (systemFiles.some(sf => entryLower === sf || entryLower === sf + '.md')) {
-				console.log(`Skipping system file: ${entry}`);
 				continue;
 			}
 
@@ -286,12 +268,10 @@ export class SyncManager {
 			const stat = fs.statSync(fullPath);
 
 			if (stat.isFile() && entry.endsWith('.md')) {
-				console.log(`Found article: ${entry}`);
 				files.push(fullPath);
 			}
 		}
 
-		console.log(`Total articles found: ${files.length}`);
 		return files;
 	}
 
@@ -302,15 +282,12 @@ export class SyncManager {
 		const { obsidianImagesPath, zolaImagesPath } = this.plugin.settings;
 
 		if (!zolaImagesPath || !obsidianImagesPath) {
-			console.log('Image paths not configured, skipping image sync');
 			return;
 		}
 
 		try {
 			const adapter = this.app.vault.adapter;
 			const obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
-
-			console.log(`Starting image sync: ${obsidianImageDir} -> ${zolaImagesPath}`);
 
 			// Get all image files
 			const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'];
@@ -320,26 +297,14 @@ export class SyncManager {
 				imageExtensions.some(ext => file.path.toLowerCase().endsWith(ext))
 			);
 
-			console.log(`Found ${imageFiles.length} images in Obsidian`);
-
 			if (imageFiles.length === 0) {
-				console.log('No images found to sync');
 				return;
 			}
 
 			// Ensure Zola image directory exists
 			if (!fs.existsSync(zolaImagesPath)) {
 				fs.mkdirSync(zolaImagesPath, { recursive: true });
-				console.log(`✓ Created directory: ${zolaImagesPath}`);
 			}
-
-			// Get existing images in Zola directory
-			let existingZolaImages: string[] = [];
-			if (fs.existsSync(zolaImagesPath)) {
-				existingZolaImages = fs.readdirSync(zolaImagesPath);
-			}
-
-			console.log(`Zola already has ${existingZolaImages.length} images`);
 
 			let syncedCount = 0;
 			let skippedCount = 0;
@@ -352,29 +317,22 @@ export class SyncManager {
 
 					// Check if file already exists in Zola
 					if (fs.existsSync(targetPath)) {
-						console.log(`Image already exists, skipping: ${fileName}`);
 						skippedCount++;
 						continue;
 					}
 
 					// Read and copy file (new file)
-					console.log(`Preparing to sync new image: ${fileName}`);
 					const content = await adapter.readBinary(imageFile.path);
 					fs.writeFileSync(targetPath, Buffer.from(content));
-					console.log(`✓ Synced image: ${fileName}`);
 					syncedCount++;
 				} catch (error) {
-					console.error(`✗ Failed to sync image: ${imageFile.name}`, error);
+					console.error(`Failed to sync image: ${imageFile.name}`, error);
 				}
 			}
 
 			if (syncedCount > 0) {
 				new Notice(`Synced ${syncedCount} new images`);
-			} else {
-				console.log('No new images to sync');
 			}
-
-			console.log(`Image sync complete: added ${syncedCount}, skipped ${skippedCount}, total ${imageFiles.length}`);
 		} catch (error) {
 			console.error('Image sync failed:', error);
 			new Notice('Error syncing images, please check console');

@@ -1,4 +1,4 @@
-import { App, Notice, Plugin, WorkspaceLeaf } from 'obsidian';
+import { App, Notice, Plugin, WorkspaceLeaf, TFile, Platform } from 'obsidian';
 import { ZolaPublishSettings, DEFAULT_SETTINGS } from './src/settings';
 import { ZolaPublishSettingTab } from './src/settingTab';
 import { ZolaPublishView, VIEW_TYPE_ZOLAPUBLISH } from './src/view';
@@ -96,8 +96,7 @@ export default class ZolaPublishPlugin extends Plugin {
 	}
 
 	onunload() {
-		// Cleanup work
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_ZOLAPUBLISH);
+		// Cleanup work (Obsidian handles view cleanup automatically)
 	}
 
 	async loadSettings() {
@@ -183,9 +182,9 @@ Start writing here...
 
 			// Open file
 			const file = vault.getAbstractFileByPath(fullPath);
-			if (file) {
+			if (file instanceof TFile) {
 				const leaf = this.app.workspace.getLeaf(false);
-				await leaf.openFile(file as any);
+				await leaf.openFile(file);
 			}
 
 			new Notice(`Article created: ${fileName}`);
@@ -212,7 +211,7 @@ Start writing here...
 	async launchPreview() {
 		try {
 			// Platform compatibility check
-			if (process.platform !== 'darwin') {
+			if (!Platform.isMacOS) {
 				new Notice('Preview launch is currently only supported on macOS.\nWindows/Linux support coming soon.\n\nPlease run "zola serve" manually in your terminal.');
 				return;
 			}
@@ -245,30 +244,24 @@ Start writing here...
 			// Get Zola project root directory (remove /content/posts part)
 			const zolaRootPath = this.settings.zolaProjectPath.replace(/\/content\/posts\/?$/, '');
 
-			console.log(`Zola project path: ${zolaRootPath}`);
-
 			// Start zola serve in a new terminal window
 			const command = `cd "${zolaRootPath}" && zola serve`;
 
 			// macOS: Launch in new window using osascript
 			await execAsync(`osascript -e 'tell application "Terminal" to do script "cd \\"${zolaRootPath}\\" && zola serve"'`);
 
-			console.log('Terminal command executed');
-
 			this.zolaPreviewRunning = true;
 			new Notice('Preview service started!');
 
 			// Wait 3 seconds for service to fully start
 			setTimeout(() => {
-				console.log('Preparing to open browser');
 				// Use macOS open command to open browser
 				const { exec } = require('child_process');
-				exec('open http://127.0.0.1:1111', (error: any) => {
+				exec('open http://127.0.0.1:1111', (error: Error | null) => {
 					if (error) {
 						console.error('Failed to open browser:', error);
 						new Notice('Please visit manually: http://127.0.0.1:1111');
 					} else {
-						console.log('Browser opened');
 						new Notice('Browser opened: http://127.0.0.1:1111');
 					}
 				});
@@ -293,7 +286,7 @@ Start writing here...
 	async publishToGitHub() {
 		try {
 			// Platform compatibility note
-			if (process.platform !== 'darwin') {
+			if (!Platform.isMacOS) {
 				new Notice('Auto-publish is currently optimized for macOS.\n\nFor Windows/Linux, please use git commands manually:\ngit add .\ngit commit -m "Update"\ngit push');
 				return;
 			}
@@ -327,11 +320,6 @@ Start writing here...
 			try {
 				const { stdout, stderr } = await execAsync(fullCommand);
 
-				console.log('Git output:', stdout);
-				if (stderr) {
-					console.log('Git error output:', stderr);
-				}
-
 				new Notice('Published successfully! Code pushed to GitHub');
 
 				// Log the action
@@ -349,11 +337,11 @@ Start writing here...
 				if (this.settings.cloudflareDeployUrl) {
 					new Notice('You can check deployment status on Cloudflare Pages');
 				}
-			} catch (gitError: any) {
+			} catch (gitError) {
 				console.error('Git command execution failed:', gitError);
 
 				// Check if error is due to no changes
-				if (gitError.message.includes('nothing to commit')) {
+				if (gitError instanceof Error && gitError.message.includes('nothing to commit')) {
 					new Notice('No new changes to commit');
 				} else {
 					throw gitError;

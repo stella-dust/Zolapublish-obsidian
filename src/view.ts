@@ -144,7 +144,6 @@ export class ZolaPublishView extends ItemView {
 			text: 'Tags List',
 			cls: 'zolapublish-section-title'
 		});
-		title.style.cursor = 'pointer';
 		title.onclick = () => {
 			this.currentTab = 'tags';
 			this.render();
@@ -178,7 +177,7 @@ export class ZolaPublishView extends ItemView {
 
 			// Expand/collapse icon
 			const expandIcon = logTimeRow.createSpan({ cls: 'zolapublish-log-expand-icon' });
-			expandIcon.innerHTML = this.expandedLogs.has(index) ? '−' : '+';
+			expandIcon.textContent = this.expandedLogs.has(index) ? '−' : '+';
 
 			logHeader.createDiv({ text: log.summary, cls: 'zolapublish-log-summary' });
 
@@ -235,7 +234,7 @@ export class ZolaPublishView extends ItemView {
 
 				// Expand/collapse icon
 				const expandIcon = tagHeader.createSpan({ cls: 'zolapublish-tag-expand-icon' });
-				expandIcon.innerHTML = this.expandedTags.has(tagName) ? '−' : '+';
+				expandIcon.textContent = this.expandedTags.has(tagName) ? '−' : '+';
 
 				// Click to expand/collapse
 				tagHeader.onclick = () => {
