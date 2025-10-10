@@ -166,26 +166,17 @@ var ArticleManager = class {
   async getArticles() {
     const articles = [];
     const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
+    const adapter = this.app.vault.adapter;
+    const vaultBasePath = adapter.getBasePath();
     let basePath;
-    if (obsidianPostsPath.startsWith("/")) {
-      const pathParts = obsidianPostsPath.split("/");
-      let vaultRootIndex = -1;
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        const part = pathParts[i];
-        if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
-          vaultRootIndex = i;
-          break;
-        }
-      }
-      if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
-        const relativeParts = pathParts.slice(vaultRootIndex + 1);
-        basePath = relativeParts.join("/");
-      } else {
-        basePath = obsidianPostsPath.replace(/^\//, "");
-      }
+    if (obsidianPostsPath.startsWith(vaultBasePath)) {
+      basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+    } else if (obsidianPostsPath.startsWith("/")) {
+      basePath = obsidianPostsPath.replace(/^\//, "");
     } else {
       basePath = obsidianPostsPath;
     }
+    basePath = basePath.replace(/\\/g, "/");
     const folder = this.app.vault.getAbstractFileByPath(basePath);
     if (!folder || !(folder instanceof import_obsidian2.TFolder)) {
       return articles;
