@@ -535,26 +535,17 @@ var SyncManager = class {
     }
     try {
       new import_obsidian4.Notice("Pushing articles to Zola project...");
+      const adapter = this.app.vault.adapter;
+      const vaultBasePath = adapter.getBasePath();
       let basePath;
-      if (obsidianPostsPath.startsWith("/")) {
-        const pathParts = obsidianPostsPath.split("/");
-        let vaultRootIndex = -1;
-        for (let i = 0; i < pathParts.length - 1; i++) {
-          const part = pathParts[i];
-          if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
-            vaultRootIndex = i;
-            break;
-          }
-        }
-        if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
-          const relativeParts = pathParts.slice(vaultRootIndex + 1);
-          basePath = relativeParts.join("/");
-        } else {
-          basePath = obsidianPostsPath.replace(/^\//, "");
-        }
+      if (obsidianPostsPath.startsWith(vaultBasePath)) {
+        basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+      } else if (obsidianPostsPath.startsWith("/")) {
+        basePath = obsidianPostsPath.replace(/^\//, "");
       } else {
         basePath = obsidianPostsPath;
       }
+      basePath = basePath.replace(/\\/g, "/");
       const systemFiles = ["_index.md", "index.md"];
       const files = this.app.vault.getMarkdownFiles().filter((file) => {
         if (!file.path.startsWith(basePath)) {
@@ -994,7 +985,17 @@ var ZolaPublishPlugin = class extends import_obsidian5.Plugin {
       const fileName = `${dateStr}-new-article.md`;
       const vault = this.app.vault;
       const adapter = vault.adapter;
-      const basePath = this.settings.obsidianPostsPath.replace(/^\//, "");
+      const vaultBasePath = adapter.getBasePath();
+      const obsidianPostsPath = this.settings.obsidianPostsPath;
+      let basePath;
+      if (obsidianPostsPath.startsWith(vaultBasePath)) {
+        basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+      } else if (obsidianPostsPath.startsWith("/")) {
+        basePath = obsidianPostsPath.replace(/^\//, "");
+      } else {
+        basePath = obsidianPostsPath;
+      }
+      basePath = basePath.replace(/\\/g, "/");
       const fullPath = `${basePath}/${fileName}`;
       const frontmatter = `+++
 title = "New Article"

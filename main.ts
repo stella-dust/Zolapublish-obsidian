@@ -151,10 +151,26 @@ export default class ZolaPublishPlugin extends Plugin {
 			const dateStr = now.toISOString().split('T')[0];
 			const fileName = `${dateStr}-new-article.md`;
 
-			// Get full path
+			// Get full path - convert absolute path to relative
 			const vault = this.app.vault;
 			const adapter = vault.adapter;
-			const basePath = this.settings.obsidianPostsPath.replace(/^\//, '');
+			const vaultBasePath = (adapter as any).getBasePath();
+			const obsidianPostsPath = this.settings.obsidianPostsPath;
+
+			let basePath: string;
+			if (obsidianPostsPath.startsWith(vaultBasePath)) {
+				// Absolute path starting with vault base - convert to relative
+				basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+			} else if (obsidianPostsPath.startsWith('/')) {
+				// Absolute path but not in vault - try to strip leading slash
+				basePath = obsidianPostsPath.replace(/^\//, '');
+			} else {
+				// Already relative path
+				basePath = obsidianPostsPath;
+			}
+
+			// Normalize path separators
+			basePath = basePath.replace(/\\/g, '/');
 			const fullPath = `${basePath}/${fileName}`;
 
 			// Generate Zola Frontmatter

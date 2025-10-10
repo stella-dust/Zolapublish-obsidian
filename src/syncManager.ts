@@ -26,37 +26,25 @@ export class SyncManager {
 		try {
 			new Notice('Pushing articles to Zola project...');
 
-			// Get all articles from Obsidian
-			// Convert absolute path to relative path
+			// Get all articles from Obsidian - convert absolute path to relative
+			const adapter = this.app.vault.adapter;
+			const vaultBasePath = (adapter as any).getBasePath();
+
 			let basePath: string;
-			if (obsidianPostsPath.startsWith('/')) {
-				// Absolute path - extract the relative part after the vault root
-				const pathParts = obsidianPostsPath.split('/');
-				
-				// Try to find a reasonable vault root by looking for common patterns
-				let vaultRootIndex = -1;
-				for (let i = 0; i < pathParts.length - 1; i++) {
-					const part = pathParts[i];
-					// Check if this could be a vault name (contains spaces, common patterns)
-					if (part.includes(' ') || part.includes('Brain') || part.includes('Vault') || part.includes('Obsidian')) {
-						vaultRootIndex = i;
-						break;
-					}
-				}
-				
-				if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
-					// Get everything after the vault name
-					const relativeParts = pathParts.slice(vaultRootIndex + 1);
-					basePath = relativeParts.join('/');
-				} else {
-					// Fallback: use the original logic
-					basePath = obsidianPostsPath.replace(/^\//, '');
-				}
+			if (obsidianPostsPath.startsWith(vaultBasePath)) {
+				// Absolute path starting with vault base - convert to relative
+				basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+			} else if (obsidianPostsPath.startsWith('/')) {
+				// Absolute path but not in vault - try to strip leading slash
+				basePath = obsidianPostsPath.replace(/^\//, '');
 			} else {
 				// Already relative path
 				basePath = obsidianPostsPath;
 			}
-			
+
+			// Normalize path separators
+			basePath = basePath.replace(/\\/g, '/');
+
 			const systemFiles = ['_index.md', 'index.md'];
 
 			const files = this.app.vault.getMarkdownFiles().filter(file => {
