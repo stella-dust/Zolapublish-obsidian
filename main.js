@@ -1146,6 +1146,11 @@ Start writing here...
       }
       new import_obsidian5.Notice("Starting Zola preview service...");
       const zolaRootPath = this.settings.zolaProjectPath.replace(/\/content\/posts\/?$/, "");
+      const publicPath = `${zolaRootPath}/public`;
+      try {
+        await execAsync(`rm -rf "${publicPath}"`);
+      } catch (error) {
+      }
       const command = `cd "${zolaRootPath}" && zola serve`;
       await execAsync(`osascript -e 'tell application "Terminal" to do script "cd \\"${zolaRootPath}\\" && zola serve"'`);
       this.zolaPreviewRunning = true;

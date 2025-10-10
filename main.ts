@@ -264,6 +264,14 @@ Start writing here...
 			// Get Zola project root directory (remove /content/posts part)
 			const zolaRootPath = this.settings.zolaProjectPath.replace(/\/content\/posts\/?$/, '');
 
+			// Clean public directory to remove cached pages
+			const publicPath = `${zolaRootPath}/public`;
+			try {
+				await execAsync(`rm -rf "${publicPath}"`);
+			} catch (error) {
+				// Directory might not exist, ignore
+			}
+
 			// Start zola serve in a new terminal window
 			const command = `cd "${zolaRootPath}" && zola serve`;
 

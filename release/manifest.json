@@ -1,7 +1,7 @@
 {
 	"id": "zolapublish",
 	"name": "Zolapublish",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"minAppVersion": "0.15.0",
 	"description": "Manage, edit, sync and publish Zola-based blog posts",
 	"author": "Junyi Yan",
