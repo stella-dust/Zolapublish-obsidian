@@ -1053,10 +1053,15 @@ Start writing here...
       try {
         const { stdout } = await execAsync("lsof -ti:1111");
         if (stdout.trim()) {
-          new import_obsidian5.Notice("Zola preview is already running\nOpening browser...");
-          const { exec: exec2 } = require("child_process");
-          exec2("open http://127.0.0.1:1111");
-          return;
+          new import_obsidian5.Notice("Stopping old Zola preview...");
+          const pids = stdout.trim().split("\n");
+          for (const pid of pids) {
+            try {
+              await execAsync(`kill ${pid}`);
+            } catch (e) {
+            }
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1e3));
         }
       } catch (error) {
       }

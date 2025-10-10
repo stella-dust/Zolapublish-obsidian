@@ -238,18 +238,22 @@ Start writing here...
 				return;
 			}
 
-			// Check if Zola is already running
+			// Check if Zola is already running and kill it
 			try {
 				const { stdout } = await execAsync('lsof -ti:1111');
 				if (stdout.trim()) {
-					// Port 1111 is occupied, Zola might already be running
-					new Notice('Zola preview is already running\nOpening browser...');
-
-					// Open browser directly
-					const { exec } = require('child_process');
-					exec('open http://127.0.0.1:1111');
-
-					return;
+					// Port 1111 is occupied, kill the old process to ensure fresh start
+					new Notice('Stopping old Zola preview...');
+					const pids = stdout.trim().split('\n');
+					for (const pid of pids) {
+						try {
+							await execAsync(`kill ${pid}`);
+						} catch (e) {
+							// Process might have already exited
+						}
+					}
+					// Wait a bit for port to be released
+					await new Promise(resolve => setTimeout(resolve, 1000));
 				}
 			} catch (error) {
 				// Port not occupied, continue startup
