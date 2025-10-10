@@ -1,6 +1,8 @@
 import { ItemView, WorkspaceLeaf, setIcon } from 'obsidian';
 import ZolaPublishPlugin from '../main';
 import { ArticleManager } from './articleManager';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export const VIEW_TYPE_ZOLAPUBLISH = 'zolapublish-view';
 
@@ -48,7 +50,7 @@ export class ZolaPublishView extends ItemView {
 		// Cleanup work
 	}
 
-	private render(): void {
+	private async render(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
 		container.addClass('zolapublish-view');
@@ -72,6 +74,9 @@ export class ZolaPublishView extends ItemView {
 		// Create top icon button bar (5 buttons)
 		this.createActionBar(container);
 
+		// Create sync status indicator
+		await this.createSyncStatus(container);
+
 		// Create section title
 		this.createSectionTitle(container);
 
@@ -79,7 +84,7 @@ export class ZolaPublishView extends ItemView {
 		if (this.currentTab === 'logs') {
 			this.renderLogsSection(container);
 		} else {
-			this.renderTagsSection(container);
+			await this.renderTagsSection(container);
 		}
 	}
 
@@ -136,6 +141,106 @@ export class ZolaPublishView extends ItemView {
 
 			btn.onclick = action;
 		});
+	}
+
+	private async createSyncStatus(container: Element): Promise<void> {
+		const statusDiv = container.createDiv({ cls: 'zolapublish-sync-status' });
+
+		try {
+			const { obsidianPostsPath, zolaProjectPath, obsidianImagesPath, zolaImagesPath } = this.plugin.settings;
+
+			if (!zolaProjectPath) {
+				statusDiv.createSpan({ text: 'Configure Zola path in settings', cls: 'zolapublish-status-warning' });
+				return;
+			}
+
+			// Count articles in vault
+			const adapter = this.app.vault.adapter;
+			const vaultBasePath = (adapter as any).getBasePath();
+
+			let basePath: string;
+			if (obsidianPostsPath.startsWith(vaultBasePath)) {
+				basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+			} else if (obsidianPostsPath.startsWith('/')) {
+				basePath = obsidianPostsPath.replace(/^\//, '');
+			} else {
+				basePath = obsidianPostsPath;
+			}
+			basePath = basePath.replace(/\\/g, '/');
+
+			const vaultArticles = this.app.vault.getMarkdownFiles().filter(file => {
+				if (!file.path.startsWith(basePath)) return false;
+				if (file.name === '_index.md' || file.name === 'index.md') return false;
+				return true;
+			});
+
+			// Count articles in Zola
+			let zolaArticles = 0;
+			if (fs.existsSync(zolaProjectPath)) {
+				const zolaFiles = fs.readdirSync(zolaProjectPath);
+				zolaArticles = zolaFiles.filter(f => {
+					if (!f.endsWith('.md')) return false;
+					if (f === '_index.md' || f === 'index.md') return false;
+					return true;
+				}).length;
+			}
+
+			// Count images
+			let vaultImages = 0;
+			let zolaImages = 0;
+
+			if (obsidianImagesPath && zolaImagesPath) {
+				const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'];
+
+				// Vault images
+				const obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
+				const allFiles = this.app.vault.getFiles();
+				vaultImages = allFiles.filter(file =>
+					file.path.startsWith(obsidianImageDir) &&
+					imageExtensions.some(ext => file.path.toLowerCase().endsWith(ext))
+				).length;
+
+				// Zola images
+				if (fs.existsSync(zolaImagesPath)) {
+					const zolaImageFiles = fs.readdirSync(zolaImagesPath);
+					zolaImages = zolaImageFiles.filter(f =>
+						imageExtensions.some(ext => f.toLowerCase().endsWith(ext))
+					).length;
+				}
+			}
+
+			// Calculate differences
+			const articleDiff = vaultArticles.length - zolaArticles;
+			const imageDiff = vaultImages - zolaImages;
+
+			// Build status message
+			const parts: string[] = [];
+
+			if (articleDiff > 0) {
+				parts.push(`${articleDiff} article${articleDiff > 1 ? 's' : ''}`);
+			}
+			if (imageDiff > 0) {
+				parts.push(`${imageDiff} image${imageDiff > 1 ? 's' : ''}`);
+			}
+
+			if (parts.length > 0) {
+				const statusText = parts.join(', ') + ' waiting to sync';
+				statusDiv.createSpan({ text: statusText, cls: 'zolapublish-status-pending' });
+
+				// Add sync icon
+				const syncIcon = statusDiv.createSpan({ cls: 'zolapublish-status-icon' });
+				setIcon(syncIcon, 'alert-circle');
+			} else {
+				statusDiv.createSpan({ text: 'All synced', cls: 'zolapublish-status-synced' });
+
+				// Add check icon
+				const checkIcon = statusDiv.createSpan({ cls: 'zolapublish-status-icon' });
+				setIcon(checkIcon, 'check-circle');
+			}
+		} catch (error) {
+			console.error('Failed to calculate sync status:', error);
+			statusDiv.createSpan({ text: 'Status unavailable', cls: 'zolapublish-status-error' });
+		}
 	}
 
 	private createSectionTitle(container: Element): void {

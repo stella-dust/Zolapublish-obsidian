@@ -90,6 +90,53 @@
 	height: 16px;
 }
 
+/* Sync Status */
+.zolapublish-sync-status {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	margin: 12px 0;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	font-size: 13px;
+	border-left: 3px solid transparent;
+}
+
+.zolapublish-status-pending {
+	color: var(--text-warning);
+}
+
+.zolapublish-sync-status:has(.zolapublish-status-pending) {
+	border-left-color: var(--text-warning);
+}
+
+.zolapublish-status-synced {
+	color: var(--text-success);
+}
+
+.zolapublish-sync-status:has(.zolapublish-status-synced) {
+	border-left-color: var(--text-success);
+}
+
+.zolapublish-status-warning {
+	color: var(--text-muted);
+}
+
+.zolapublish-status-error {
+	color: var(--text-error);
+}
+
+.zolapublish-status-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
+.zolapublish-status-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
 /* Logs Section */
 .zolapublish-logs-section {
 	margin-bottom: 16px;

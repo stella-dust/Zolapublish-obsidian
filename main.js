@@ -291,6 +291,7 @@ var ArticleManager = class {
 };
 
 // src/view.ts
+var fs = __toESM(require("fs"));
 var VIEW_TYPE_ZOLAPUBLISH = "zolapublish-view";
 var ZolaPublishView = class extends import_obsidian3.ItemView {
   constructor(leaf, plugin) {
@@ -324,7 +325,7 @@ var ZolaPublishView = class extends import_obsidian3.ItemView {
   }
   async onClose() {
   }
-  render() {
+  async render() {
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("zolapublish-view");
@@ -340,11 +341,12 @@ var ZolaPublishView = class extends import_obsidian3.ItemView {
       this.render();
     };
     this.createActionBar(container);
+    await this.createSyncStatus(container);
     this.createSectionTitle(container);
     if (this.currentTab === "logs") {
       this.renderLogsSection(container);
     } else {
-      this.renderTagsSection(container);
+      await this.renderTagsSection(container);
     }
   }
   createActionBar(container) {
@@ -395,6 +397,83 @@ var ZolaPublishView = class extends import_obsidian3.ItemView {
       (0, import_obsidian3.setIcon)(btn, iconName);
       btn.onclick = action;
     });
+  }
+  async createSyncStatus(container) {
+    const statusDiv = container.createDiv({ cls: "zolapublish-sync-status" });
+    try {
+      const { obsidianPostsPath, zolaProjectPath, obsidianImagesPath, zolaImagesPath } = this.plugin.settings;
+      if (!zolaProjectPath) {
+        statusDiv.createSpan({ text: "Configure Zola path in settings", cls: "zolapublish-status-warning" });
+        return;
+      }
+      const adapter = this.app.vault.adapter;
+      const vaultBasePath = adapter.getBasePath();
+      let basePath;
+      if (obsidianPostsPath.startsWith(vaultBasePath)) {
+        basePath = obsidianPostsPath.substring(vaultBasePath.length + 1);
+      } else if (obsidianPostsPath.startsWith("/")) {
+        basePath = obsidianPostsPath.replace(/^\//, "");
+      } else {
+        basePath = obsidianPostsPath;
+      }
+      basePath = basePath.replace(/\\/g, "/");
+      const vaultArticles = this.app.vault.getMarkdownFiles().filter((file) => {
+        if (!file.path.startsWith(basePath))
+          return false;
+        if (file.name === "_index.md" || file.name === "index.md")
+          return false;
+        return true;
+      });
+      let zolaArticles = 0;
+      if (fs.existsSync(zolaProjectPath)) {
+        const zolaFiles = fs.readdirSync(zolaProjectPath);
+        zolaArticles = zolaFiles.filter((f) => {
+          if (!f.endsWith(".md"))
+            return false;
+          if (f === "_index.md" || f === "index.md")
+            return false;
+          return true;
+        }).length;
+      }
+      let vaultImages = 0;
+      let zolaImages = 0;
+      if (obsidianImagesPath && zolaImagesPath) {
+        const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"];
+        const obsidianImageDir = obsidianImagesPath.replace(/^\//, "");
+        const allFiles = this.app.vault.getFiles();
+        vaultImages = allFiles.filter(
+          (file) => file.path.startsWith(obsidianImageDir) && imageExtensions.some((ext) => file.path.toLowerCase().endsWith(ext))
+        ).length;
+        if (fs.existsSync(zolaImagesPath)) {
+          const zolaImageFiles = fs.readdirSync(zolaImagesPath);
+          zolaImages = zolaImageFiles.filter(
+            (f) => imageExtensions.some((ext) => f.toLowerCase().endsWith(ext))
+          ).length;
+        }
+      }
+      const articleDiff = vaultArticles.length - zolaArticles;
+      const imageDiff = vaultImages - zolaImages;
+      const parts = [];
+      if (articleDiff > 0) {
+        parts.push(`${articleDiff} article${articleDiff > 1 ? "s" : ""}`);
+      }
+      if (imageDiff > 0) {
+        parts.push(`${imageDiff} image${imageDiff > 1 ? "s" : ""}`);
+      }
+      if (parts.length > 0) {
+        const statusText = parts.join(", ") + " waiting to sync";
+        statusDiv.createSpan({ text: statusText, cls: "zolapublish-status-pending" });
+        const syncIcon = statusDiv.createSpan({ cls: "zolapublish-status-icon" });
+        (0, import_obsidian3.setIcon)(syncIcon, "alert-circle");
+      } else {
+        statusDiv.createSpan({ text: "All synced", cls: "zolapublish-status-synced" });
+        const checkIcon = statusDiv.createSpan({ cls: "zolapublish-status-icon" });
+        (0, import_obsidian3.setIcon)(checkIcon, "check-circle");
+      }
+    } catch (error) {
+      console.error("Failed to calculate sync status:", error);
+      statusDiv.createSpan({ text: "Status unavailable", cls: "zolapublish-status-error" });
+    }
   }
   createSectionTitle(container) {
     const title = container.createEl("h3", {
@@ -516,7 +595,7 @@ var ZolaPublishView = class extends import_obsidian3.ItemView {
 
 // src/syncManager.ts
 var import_obsidian4 = require("obsidian");
-var fs = __toESM(require("fs"));
+var fs2 = __toESM(require("fs"));
 var path = __toESM(require("path"));
 var SyncManager = class {
   constructor(app, plugin) {
@@ -596,7 +675,7 @@ var SyncManager = class {
     try {
       new import_obsidian4.Notice("Pulling articles from Zola project...");
       const adapter = this.app.vault.adapter;
-      if (!fs.existsSync(zolaProjectPath)) {
+      if (!fs2.existsSync(zolaProjectPath)) {
         new import_obsidian4.Notice("Zola project path does not exist");
         return;
       }
@@ -633,13 +712,13 @@ var SyncManager = class {
     const fileName = file.name;
     content = this.convertImageLinks(content);
     const targetPath = path.join(zolaProjectPath, fileName);
-    if (fs.existsSync(targetPath)) {
-      const existingContent = fs.readFileSync(targetPath, "utf-8");
+    if (fs2.existsSync(targetPath)) {
+      const existingContent = fs2.readFileSync(targetPath, "utf-8");
       if (existingContent === content) {
         return;
       }
     }
-    fs.writeFileSync(targetPath, content, "utf-8");
+    fs2.writeFileSync(targetPath, content, "utf-8");
   }
   /**
    * Convert image links: Obsidian format -> Zola format
@@ -661,7 +740,7 @@ var SyncManager = class {
    */
   async syncFileFromZola(zolaFilePath) {
     const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
-    let content = fs.readFileSync(zolaFilePath, "utf-8");
+    let content = fs2.readFileSync(zolaFilePath, "utf-8");
     content = this.convertImageLinksToObsidian(content);
     const fileName = path.basename(zolaFilePath);
     const adapter = this.app.vault.adapter;
@@ -703,10 +782,10 @@ var SyncManager = class {
    */
   getZolaFiles(zolaPath) {
     const files = [];
-    if (!fs.existsSync(zolaPath)) {
+    if (!fs2.existsSync(zolaPath)) {
       return files;
     }
-    const entries = fs.readdirSync(zolaPath);
+    const entries = fs2.readdirSync(zolaPath);
     const systemFiles = ["_index.md", "index.md", "_index", "index"];
     for (const entry of entries) {
       const entryLower = entry.toLowerCase();
@@ -717,7 +796,7 @@ var SyncManager = class {
         continue;
       }
       const fullPath = path.join(zolaPath, entry);
-      const stat = fs.statSync(fullPath);
+      const stat = fs2.statSync(fullPath);
       if (stat.isFile() && entry.endsWith(".md")) {
         files.push(fullPath);
       }
@@ -762,8 +841,8 @@ var SyncManager = class {
       if (imageFiles.length === 0) {
         return;
       }
-      if (!fs.existsSync(zolaImagesPath)) {
-        fs.mkdirSync(zolaImagesPath, { recursive: true });
+      if (!fs2.existsSync(zolaImagesPath)) {
+        fs2.mkdirSync(zolaImagesPath, { recursive: true });
       }
       let syncedCount = 0;
       let skippedCount = 0;
@@ -771,12 +850,12 @@ var SyncManager = class {
         try {
           const fileName = imageFile.name;
           const targetPath = path.join(zolaImagesPath, fileName);
-          if (fs.existsSync(targetPath)) {
+          if (fs2.existsSync(targetPath)) {
             skippedCount++;
             continue;
           }
           const content = await adapter.readBinary(imageFile.path);
-          fs.writeFileSync(targetPath, Buffer.from(content));
+          fs2.writeFileSync(targetPath, Buffer.from(content));
           syncedCount++;
         } catch (error) {
           console.error(`Failed to sync image: ${imageFile.name}`, error);
