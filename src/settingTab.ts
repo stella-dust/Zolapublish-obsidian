@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Platform } from 'obsidian';
 import ZolaPublishPlugin from '../main';
 
 export class ZolaPublishSettingTab extends PluginSettingTab {
@@ -7,6 +7,30 @@ export class ZolaPublishSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: ZolaPublishPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	/**
+	 * Open folder picker dialog
+	 */
+	async pickFolder(): Promise<string | null> {
+		if (!Platform.isDesktop) {
+			return null;
+		}
+
+		try {
+			const { dialog } = require('@electron/remote');
+			const result = await dialog.showOpenDialog({
+				properties: ['openDirectory']
+			});
+
+			if (!result.canceled && result.filePaths.length > 0) {
+				return result.filePaths[0];
+			}
+		} catch (error) {
+			console.error('Failed to open folder picker:', error);
+		}
+
+		return null;
 	}
 
 	display(): void {
@@ -26,6 +50,17 @@ export class ZolaPublishSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.obsidianPostsPath = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Browse')
+				.setTooltip('Select folder')
+				.onClick(async () => {
+					const folder = await this.pickFolder();
+					if (folder) {
+						this.plugin.settings.obsidianPostsPath = folder;
+						await this.plugin.saveSettings();
+						this.display(); // Refresh settings page
+					}
 				}));
 
 		// Zola Project Path
@@ -38,6 +73,17 @@ export class ZolaPublishSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.zolaProjectPath = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Browse')
+				.setTooltip('Select folder')
+				.onClick(async () => {
+					const folder = await this.pickFolder();
+					if (folder) {
+						this.plugin.settings.zolaProjectPath = folder;
+						await this.plugin.saveSettings();
+						this.display();
+					}
 				}));
 
 		// Sync Strategy
@@ -102,6 +148,17 @@ export class ZolaPublishSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.obsidianImagesPath = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Browse')
+				.setTooltip('Select folder')
+				.onClick(async () => {
+					const folder = await this.pickFolder();
+					if (folder) {
+						this.plugin.settings.obsidianImagesPath = folder;
+						await this.plugin.saveSettings();
+						this.display();
+					}
 				}));
 
 		// Zola Images Path
@@ -114,6 +171,17 @@ export class ZolaPublishSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.zolaImagesPath = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Browse')
+				.setTooltip('Select folder')
+				.onClick(async () => {
+					const folder = await this.pickFolder();
+					if (folder) {
+						this.plugin.settings.zolaImagesPath = folder;
+						await this.plugin.saveSettings();
+						this.display();
+					}
 				}));
 
 		// Feature Description

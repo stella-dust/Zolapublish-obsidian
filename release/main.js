@@ -58,6 +58,26 @@ var ZolaPublishSettingTab = class extends import_obsidian.PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
   }
+  /**
+   * Open folder picker dialog
+   */
+  async pickFolder() {
+    if (!import_obsidian.Platform.isDesktop) {
+      return null;
+    }
+    try {
+      const { dialog } = require("@electron/remote");
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory"]
+      });
+      if (!result.canceled && result.filePaths.length > 0) {
+        return result.filePaths[0];
+      }
+    } catch (error) {
+      console.error("Failed to open folder picker:", error);
+    }
+    return null;
+  }
   display() {
     const { containerEl } = this;
     containerEl.empty();
@@ -65,10 +85,24 @@ var ZolaPublishSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Obsidian Posts Path").setDesc("Path to posts directory in your vault (e.g., /posts)").addText((text) => text.setPlaceholder("/posts").setValue(this.plugin.settings.obsidianPostsPath).onChange(async (value) => {
       this.plugin.settings.obsidianPostsPath = value;
       await this.plugin.saveSettings();
+    })).addButton((button) => button.setButtonText("Browse").setTooltip("Select folder").onClick(async () => {
+      const folder = await this.pickFolder();
+      if (folder) {
+        this.plugin.settings.obsidianPostsPath = folder;
+        await this.plugin.saveSettings();
+        this.display();
+      }
     }));
     new import_obsidian.Setting(containerEl).setName("Zola Project Path").setDesc("Path to Zola posts directory (/content/posts/)").addText((text) => text.setPlaceholder("/Users/username/zola-blog/content/posts").setValue(this.plugin.settings.zolaProjectPath).onChange(async (value) => {
       this.plugin.settings.zolaProjectPath = value;
       await this.plugin.saveSettings();
+    })).addButton((button) => button.setButtonText("Browse").setTooltip("Select folder").onClick(async () => {
+      const folder = await this.pickFolder();
+      if (folder) {
+        this.plugin.settings.zolaProjectPath = folder;
+        await this.plugin.saveSettings();
+        this.display();
+      }
     }));
     new import_obsidian.Setting(containerEl).setName("Sync Strategy").setDesc("Choose one-way or two-way sync").addDropdown((dropdown) => dropdown.addOption("one-way", "One-way (Obsidian \u2192 Zola)").addOption("two-way", "Two-way (Obsidian \u2194 Zola)").setValue(this.plugin.settings.syncStrategy).onChange(async (value) => {
       this.plugin.settings.syncStrategy = value;
@@ -90,10 +124,24 @@ var ZolaPublishSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Obsidian Images Path").setDesc("Local image directory in your vault (default: /images/posts/)").addText((text) => text.setPlaceholder("/images/posts/").setValue(this.plugin.settings.obsidianImagesPath).onChange(async (value) => {
       this.plugin.settings.obsidianImagesPath = value;
       await this.plugin.saveSettings();
+    })).addButton((button) => button.setButtonText("Browse").setTooltip("Select folder").onClick(async () => {
+      const folder = await this.pickFolder();
+      if (folder) {
+        this.plugin.settings.obsidianImagesPath = folder;
+        await this.plugin.saveSettings();
+        this.display();
+      }
     }));
     new import_obsidian.Setting(containerEl).setName("Zola Images Path").setDesc("Zola static images directory (default: /static/images/)").addText((text) => text.setPlaceholder("/Users/username/zola-blog/static/images").setValue(this.plugin.settings.zolaImagesPath).onChange(async (value) => {
       this.plugin.settings.zolaImagesPath = value;
       await this.plugin.saveSettings();
+    })).addButton((button) => button.setButtonText("Browse").setTooltip("Select folder").onClick(async () => {
+      const folder = await this.pickFolder();
+      if (folder) {
+        this.plugin.settings.zolaImagesPath = folder;
+        await this.plugin.saveSettings();
+        this.display();
+      }
     }));
     containerEl.createEl("p", {
       text: "Local sync only (Vault \u2194 Zola). The plugin ensures images referenced in articles are consistent between both directories.",
