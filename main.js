@@ -647,7 +647,8 @@ var SyncManager = class {
         }
       }
       await this.syncImages();
-      new import_obsidian4.Notice(`Push complete! Success: ${syncCount}, Failed: ${errorCount}`);
+      const removedCount = await this.cleanupOrphanedFiles(files);
+      new import_obsidian4.Notice(`Push complete! Success: ${syncCount}, Failed: ${errorCount}${removedCount > 0 ? `, Removed: ${removedCount}` : ""}`);
       await ((_a = this.plugin.logManager) == null ? void 0 : _a.addLog({
         action: "sync-push",
         summary: `Pushed ${syncCount} articles to Zola`,
@@ -862,6 +863,38 @@ var SyncManager = class {
     } catch (error) {
       console.error("Image sync failed:", error);
       new import_obsidian4.Notice("Error syncing images, please check console");
+    }
+  }
+  /**
+   * Clean up orphaned files in Zola (files that don't exist in vault anymore)
+   */
+  async cleanupOrphanedFiles(vaultFiles) {
+    const zolaProjectPath = this.plugin.settings.zolaProjectPath;
+    if (!zolaProjectPath || !fs2.existsSync(zolaProjectPath)) {
+      return 0;
+    }
+    try {
+      const vaultFileNames = new Set(vaultFiles.map((f) => f.name));
+      const zolaFiles = fs2.readdirSync(zolaProjectPath);
+      const systemFiles = ["_index.md", "index.md"];
+      let removedCount = 0;
+      for (const zolaFile of zolaFiles) {
+        if (systemFiles.includes(zolaFile)) {
+          continue;
+        }
+        if (!zolaFile.endsWith(".md")) {
+          continue;
+        }
+        if (!vaultFileNames.has(zolaFile)) {
+          const filePath = path.join(zolaProjectPath, zolaFile);
+          fs2.unlinkSync(filePath);
+          removedCount++;
+        }
+      }
+      return removedCount;
+    } catch (error) {
+      console.error("Failed to cleanup orphaned files:", error);
+      return 0;
     }
   }
 };

@@ -77,7 +77,10 @@ export class SyncManager {
 			// Sync images
 			await this.syncImages();
 
-			new Notice(`Push complete! Success: ${syncCount}, Failed: ${errorCount}`);
+			// Clean up orphaned files in Zola (files that exist in Zola but not in vault)
+			const removedCount = await this.cleanupOrphanedFiles(files);
+
+			new Notice(`Push complete! Success: ${syncCount}, Failed: ${errorCount}${removedCount > 0 ? `, Removed: ${removedCount}` : ''}`);
 
 			// Log the action
 			await this.plugin.logManager?.addLog({
@@ -398,6 +401,52 @@ export class SyncManager {
 		} catch (error) {
 			console.error('Image sync failed:', error);
 			new Notice('Error syncing images, please check console');
+		}
+	}
+
+	/**
+	 * Clean up orphaned files in Zola (files that don't exist in vault anymore)
+	 */
+	private async cleanupOrphanedFiles(vaultFiles: TFile[]): Promise<number> {
+		const zolaProjectPath = this.plugin.settings.zolaProjectPath;
+
+		if (!zolaProjectPath || !fs.existsSync(zolaProjectPath)) {
+			return 0;
+		}
+
+		try {
+			// Get all vault file names
+			const vaultFileNames = new Set(vaultFiles.map(f => f.name));
+
+			// Get all files in Zola directory
+			const zolaFiles = fs.readdirSync(zolaProjectPath);
+			const systemFiles = ['_index.md', 'index.md'];
+
+			let removedCount = 0;
+
+			for (const zolaFile of zolaFiles) {
+				// Skip system files
+				if (systemFiles.includes(zolaFile)) {
+					continue;
+				}
+
+				// Skip non-markdown files
+				if (!zolaFile.endsWith('.md')) {
+					continue;
+				}
+
+				// If file exists in Zola but not in vault, it's orphaned
+				if (!vaultFileNames.has(zolaFile)) {
+					const filePath = path.join(zolaProjectPath, zolaFile);
+					fs.unlinkSync(filePath);
+					removedCount++;
+				}
+			}
+
+			return removedCount;
+		} catch (error) {
+			console.error('Failed to cleanup orphaned files:', error);
+			return 0;
 		}
 	}
 }
