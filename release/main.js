@@ -804,7 +804,7 @@ var SyncManager = class {
     return files;
   }
   /**
-   * Sync image files (only push images that exist in Obsidian but not in Zola)
+   * Sync image files - update modified images and add new ones
    */
   async syncImages() {
     const { obsidianImagesPath, zolaImagesPath } = this.plugin.settings;
@@ -813,26 +813,16 @@ var SyncManager = class {
     }
     try {
       const adapter = this.app.vault.adapter;
+      const vaultBasePath = adapter.getBasePath();
       let obsidianImageDir;
-      if (obsidianImagesPath.startsWith("/")) {
-        const pathParts = obsidianImagesPath.split("/");
-        let vaultRootIndex = -1;
-        for (let i = 0; i < pathParts.length - 1; i++) {
-          const part = pathParts[i];
-          if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
-            vaultRootIndex = i;
-            break;
-          }
-        }
-        if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
-          const relativeParts = pathParts.slice(vaultRootIndex + 1);
-          obsidianImageDir = relativeParts.join("/");
-        } else {
-          obsidianImageDir = obsidianImagesPath.replace(/^\//, "");
-        }
+      if (obsidianImagesPath.startsWith(vaultBasePath)) {
+        obsidianImageDir = obsidianImagesPath.substring(vaultBasePath.length + 1);
+      } else if (obsidianImagesPath.startsWith("/")) {
+        obsidianImageDir = obsidianImagesPath.replace(/^\//, "");
       } else {
         obsidianImageDir = obsidianImagesPath;
       }
+      obsidianImageDir = obsidianImageDir.replace(/\\/g, "/");
       const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"];
       const allFiles = this.app.vault.getFiles();
       const imageFiles = allFiles.filter(
@@ -850,19 +840,24 @@ var SyncManager = class {
         try {
           const fileName = imageFile.name;
           const targetPath = path.join(zolaImagesPath, fileName);
-          if (fs2.existsSync(targetPath)) {
-            skippedCount++;
-            continue;
-          }
           const content = await adapter.readBinary(imageFile.path);
-          fs2.writeFileSync(targetPath, Buffer.from(content));
+          const newBuffer = Buffer.from(content);
+          if (fs2.existsSync(targetPath)) {
+            const stats = fs2.statSync(targetPath);
+            const existingBuffer = fs2.readFileSync(targetPath);
+            if (Buffer.compare(newBuffer, existingBuffer) === 0) {
+              skippedCount++;
+              continue;
+            }
+          }
+          fs2.writeFileSync(targetPath, newBuffer);
           syncedCount++;
         } catch (error) {
           console.error(`Failed to sync image: ${imageFile.name}`, error);
         }
       }
       if (syncedCount > 0) {
-        new import_obsidian4.Notice(`Synced ${syncedCount} new images`);
+        new import_obsidian4.Notice(`Synced ${syncedCount} image${syncedCount > 1 ? "s" : ""}`);
       }
     } catch (error) {
       console.error("Image sync failed:", error);

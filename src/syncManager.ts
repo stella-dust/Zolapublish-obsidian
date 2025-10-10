@@ -315,7 +315,7 @@ export class SyncManager {
 	}
 
 	/**
-	 * Sync image files (only push images that exist in Obsidian but not in Zola)
+	 * Sync image files - update modified images and add new ones
 	 */
 	private async syncImages(): Promise<void> {
 		const { obsidianImagesPath, zolaImagesPath } = this.plugin.settings;
@@ -326,35 +326,20 @@ export class SyncManager {
 
 		try {
 			const adapter = this.app.vault.adapter;
+			const vaultBasePath = (adapter as any).getBasePath();
+
 			// Convert absolute path to relative path
 			let obsidianImageDir: string;
-			if (obsidianImagesPath.startsWith('/')) {
-				// Absolute path - extract the relative part after the vault root
-				const pathParts = obsidianImagesPath.split('/');
-				
-				// Try to find a reasonable vault root by looking for common patterns
-				let vaultRootIndex = -1;
-				for (let i = 0; i < pathParts.length - 1; i++) {
-					const part = pathParts[i];
-					// Check if this could be a vault name (contains spaces, common patterns)
-					if (part.includes(' ') || part.includes('Brain') || part.includes('Vault') || part.includes('Obsidian')) {
-						vaultRootIndex = i;
-						break;
-					}
-				}
-				
-				if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
-					// Get everything after the vault name
-					const relativeParts = pathParts.slice(vaultRootIndex + 1);
-					obsidianImageDir = relativeParts.join('/');
-				} else {
-					// Fallback: use the original logic
-					obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
-				}
+			if (obsidianImagesPath.startsWith(vaultBasePath)) {
+				obsidianImageDir = obsidianImagesPath.substring(vaultBasePath.length + 1);
+			} else if (obsidianImagesPath.startsWith('/')) {
+				obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
 			} else {
-				// Already relative path
 				obsidianImageDir = obsidianImagesPath;
 			}
+
+			// Normalize path separators
+			obsidianImageDir = obsidianImageDir.replace(/\\/g, '/');
 
 			// Get all image files
 			const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'];
@@ -382,15 +367,25 @@ export class SyncManager {
 					const fileName = imageFile.name;
 					const targetPath = path.join(zolaImagesPath, fileName);
 
+					// Read image content from vault
+					const content = await adapter.readBinary(imageFile.path);
+					const newBuffer = Buffer.from(content);
+
 					// Check if file already exists in Zola
 					if (fs.existsSync(targetPath)) {
-						skippedCount++;
-						continue;
+						// Compare file size and modification time to detect changes
+						const stats = fs.statSync(targetPath);
+						const existingBuffer = fs.readFileSync(targetPath);
+
+						// If content is the same, skip
+						if (Buffer.compare(newBuffer, existingBuffer) === 0) {
+							skippedCount++;
+							continue;
+						}
 					}
 
-					// Read and copy file (new file)
-					const content = await adapter.readBinary(imageFile.path);
-					fs.writeFileSync(targetPath, Buffer.from(content));
+					// Write file (new or modified)
+					fs.writeFileSync(targetPath, newBuffer);
 					syncedCount++;
 				} catch (error) {
 					console.error(`Failed to sync image: ${imageFile.name}`, error);
@@ -398,7 +393,7 @@ export class SyncManager {
 			}
 
 			if (syncedCount > 0) {
-				new Notice(`Synced ${syncedCount} new images`);
+				new Notice(`Synced ${syncedCount} image${syncedCount > 1 ? 's' : ''}`);
 			}
 		} catch (error) {
 			console.error('Image sync failed:', error);
