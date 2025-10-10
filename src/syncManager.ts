@@ -27,7 +27,36 @@ export class SyncManager {
 			new Notice('Pushing articles to Zola project...');
 
 			// Get all articles from Obsidian
-			const basePath = obsidianPostsPath.replace(/^\//, '');
+			// Convert absolute path to relative path
+			let basePath: string;
+			if (obsidianPostsPath.startsWith('/')) {
+				// Absolute path - extract the relative part after the vault root
+				const pathParts = obsidianPostsPath.split('/');
+				
+				// Try to find a reasonable vault root by looking for common patterns
+				let vaultRootIndex = -1;
+				for (let i = 0; i < pathParts.length - 1; i++) {
+					const part = pathParts[i];
+					// Check if this could be a vault name (contains spaces, common patterns)
+					if (part.includes(' ') || part.includes('Brain') || part.includes('Vault') || part.includes('Obsidian')) {
+						vaultRootIndex = i;
+						break;
+					}
+				}
+				
+				if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+					// Get everything after the vault name
+					const relativeParts = pathParts.slice(vaultRootIndex + 1);
+					basePath = relativeParts.join('/');
+				} else {
+					// Fallback: use the original logic
+					basePath = obsidianPostsPath.replace(/^\//, '');
+				}
+			} else {
+				// Already relative path
+				basePath = obsidianPostsPath;
+			}
+			
 			const systemFiles = ['_index.md', 'index.md'];
 
 			const files = this.app.vault.getMarkdownFiles().filter(file => {
@@ -191,7 +220,7 @@ export class SyncManager {
 	 * Sync single file from Zola
 	 */
 	private async syncFileFromZola(zolaFilePath: string): Promise<void> {
-		const obsidianPostsPath = this.plugin.settings.obsidianPostsPath.replace(/^\//, '');
+		const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
 		let content = fs.readFileSync(zolaFilePath, 'utf-8');
 
 		// Convert image links back to Obsidian format
@@ -199,7 +228,29 @@ export class SyncManager {
 
 		// Build target path
 		const fileName = path.basename(zolaFilePath);
-		const targetPath = `${obsidianPostsPath}/${fileName}`;
+		const adapter = this.app.vault.adapter;
+
+		// Get vault base path (absolute path to vault root)
+		const vaultBasePath = (adapter as any).getBasePath();
+
+		// Build full absolute path for the target file
+		const fullTargetPath = path.join(obsidianPostsPath, fileName);
+
+		// Convert absolute path to relative path (relative to vault root)
+		let relativePath = fullTargetPath;
+		if (fullTargetPath.startsWith(vaultBasePath)) {
+			relativePath = path.relative(vaultBasePath, fullTargetPath);
+		} else if (obsidianPostsPath.startsWith('/')) {
+			// If obsidianPostsPath is absolute but doesn't start with vault base,
+			// try to extract relative path
+			relativePath = obsidianPostsPath.replace(/^\//, '') + '/' + fileName;
+		} else {
+			// Already relative
+			relativePath = obsidianPostsPath + '/' + fileName;
+		}
+
+		// Normalize path separators for cross-platform compatibility
+		const targetPath = relativePath.replace(/\\/g, '/');
 
 		// Check if file already exists
 		const existingFile = this.app.vault.getAbstractFileByPath(targetPath);
@@ -287,7 +338,35 @@ export class SyncManager {
 
 		try {
 			const adapter = this.app.vault.adapter;
-			const obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
+			// Convert absolute path to relative path
+			let obsidianImageDir: string;
+			if (obsidianImagesPath.startsWith('/')) {
+				// Absolute path - extract the relative part after the vault root
+				const pathParts = obsidianImagesPath.split('/');
+				
+				// Try to find a reasonable vault root by looking for common patterns
+				let vaultRootIndex = -1;
+				for (let i = 0; i < pathParts.length - 1; i++) {
+					const part = pathParts[i];
+					// Check if this could be a vault name (contains spaces, common patterns)
+					if (part.includes(' ') || part.includes('Brain') || part.includes('Vault') || part.includes('Obsidian')) {
+						vaultRootIndex = i;
+						break;
+					}
+				}
+				
+				if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+					// Get everything after the vault name
+					const relativeParts = pathParts.slice(vaultRootIndex + 1);
+					obsidianImageDir = relativeParts.join('/');
+				} else {
+					// Fallback: use the original logic
+					obsidianImageDir = obsidianImagesPath.replace(/^\//, '');
+				}
+			} else {
+				// Already relative path
+				obsidianImageDir = obsidianImagesPath;
+			}
 
 			// Get all image files
 			const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'];

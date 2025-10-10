@@ -117,7 +117,27 @@ var ArticleManager = class {
    */
   async getArticles() {
     const articles = [];
-    const basePath = this.plugin.settings.obsidianPostsPath.replace(/^\//, "");
+    const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
+    let basePath;
+    if (obsidianPostsPath.startsWith("/")) {
+      const pathParts = obsidianPostsPath.split("/");
+      let vaultRootIndex = -1;
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const part = pathParts[i];
+        if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
+          vaultRootIndex = i;
+          break;
+        }
+      }
+      if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+        const relativeParts = pathParts.slice(vaultRootIndex + 1);
+        basePath = relativeParts.join("/");
+      } else {
+        basePath = obsidianPostsPath.replace(/^\//, "");
+      }
+    } else {
+      basePath = obsidianPostsPath;
+    }
     const folder = this.app.vault.getAbstractFileByPath(basePath);
     if (!folder || !(folder instanceof import_obsidian2.TFolder)) {
       return articles;
@@ -476,7 +496,26 @@ var SyncManager = class {
     }
     try {
       new import_obsidian4.Notice("Pushing articles to Zola project...");
-      const basePath = obsidianPostsPath.replace(/^\//, "");
+      let basePath;
+      if (obsidianPostsPath.startsWith("/")) {
+        const pathParts = obsidianPostsPath.split("/");
+        let vaultRootIndex = -1;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i];
+          if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
+            vaultRootIndex = i;
+            break;
+          }
+        }
+        if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+          const relativeParts = pathParts.slice(vaultRootIndex + 1);
+          basePath = relativeParts.join("/");
+        } else {
+          basePath = obsidianPostsPath.replace(/^\//, "");
+        }
+      } else {
+        basePath = obsidianPostsPath;
+      }
       const systemFiles = ["_index.md", "index.md"];
       const files = this.app.vault.getMarkdownFiles().filter((file) => {
         if (!file.path.startsWith(basePath)) {
@@ -591,11 +630,22 @@ var SyncManager = class {
    * Sync single file from Zola
    */
   async syncFileFromZola(zolaFilePath) {
-    const obsidianPostsPath = this.plugin.settings.obsidianPostsPath.replace(/^\//, "");
+    const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
     let content = fs.readFileSync(zolaFilePath, "utf-8");
     content = this.convertImageLinksToObsidian(content);
     const fileName = path.basename(zolaFilePath);
-    const targetPath = `${obsidianPostsPath}/${fileName}`;
+    const adapter = this.app.vault.adapter;
+    const vaultBasePath = adapter.getBasePath();
+    const fullTargetPath = path.join(obsidianPostsPath, fileName);
+    let relativePath = fullTargetPath;
+    if (fullTargetPath.startsWith(vaultBasePath)) {
+      relativePath = path.relative(vaultBasePath, fullTargetPath);
+    } else if (obsidianPostsPath.startsWith("/")) {
+      relativePath = obsidianPostsPath.replace(/^\//, "") + "/" + fileName;
+    } else {
+      relativePath = obsidianPostsPath + "/" + fileName;
+    }
+    const targetPath = relativePath.replace(/\\/g, "/");
     const existingFile = this.app.vault.getAbstractFileByPath(targetPath);
     if (existingFile instanceof import_obsidian4.TFile) {
       await this.app.vault.modify(existingFile, content);
@@ -654,7 +704,26 @@ var SyncManager = class {
     }
     try {
       const adapter = this.app.vault.adapter;
-      const obsidianImageDir = obsidianImagesPath.replace(/^\//, "");
+      let obsidianImageDir;
+      if (obsidianImagesPath.startsWith("/")) {
+        const pathParts = obsidianImagesPath.split("/");
+        let vaultRootIndex = -1;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i];
+          if (part.includes(" ") || part.includes("Brain") || part.includes("Vault") || part.includes("Obsidian")) {
+            vaultRootIndex = i;
+            break;
+          }
+        }
+        if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+          const relativeParts = pathParts.slice(vaultRootIndex + 1);
+          obsidianImageDir = relativeParts.join("/");
+        } else {
+          obsidianImageDir = obsidianImagesPath.replace(/^\//, "");
+        }
+      } else {
+        obsidianImageDir = obsidianImagesPath;
+      }
       const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"];
       const allFiles = this.app.vault.getFiles();
       const imageFiles = allFiles.filter(

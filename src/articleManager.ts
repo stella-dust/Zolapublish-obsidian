@@ -23,7 +23,36 @@ export class ArticleManager {
 	 */
 	async getArticles(): Promise<ArticleInfo[]> {
 		const articles: ArticleInfo[] = [];
-		const basePath = this.plugin.settings.obsidianPostsPath.replace(/^\//, '');
+		// Convert absolute path to relative path
+		const obsidianPostsPath = this.plugin.settings.obsidianPostsPath;
+		let basePath: string;
+		if (obsidianPostsPath.startsWith('/')) {
+			// Absolute path - extract the relative part after the vault root
+			const pathParts = obsidianPostsPath.split('/');
+			
+			// Try to find a reasonable vault root by looking for common patterns
+			let vaultRootIndex = -1;
+			for (let i = 0; i < pathParts.length - 1; i++) {
+				const part = pathParts[i];
+				// Check if this could be a vault name (contains spaces, common patterns)
+				if (part.includes(' ') || part.includes('Brain') || part.includes('Vault') || part.includes('Obsidian')) {
+					vaultRootIndex = i;
+					break;
+				}
+			}
+			
+			if (vaultRootIndex !== -1 && vaultRootIndex < pathParts.length - 1) {
+				// Get everything after the vault name
+				const relativeParts = pathParts.slice(vaultRootIndex + 1);
+				basePath = relativeParts.join('/');
+			} else {
+				// Fallback: use the original logic
+				basePath = obsidianPostsPath.replace(/^\//, '');
+			}
+		} else {
+			// Already relative path
+			basePath = obsidianPostsPath;
+		}
 
 		const folder = this.app.vault.getAbstractFileByPath(basePath);
 		if (!folder || !(folder instanceof TFolder)) {
