@@ -1,6 +1,6 @@
 {
   "name": "zolapublish-obsidian",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Obsidian plugin to manage, edit, sync and publish Zola-based blog posts",
   "main": "main.js",
   "scripts": {

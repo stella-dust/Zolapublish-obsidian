@@ -986,6 +986,7 @@ var LogManager = class {
 // main.ts
 var import_child_process = require("child_process");
 var import_util = require("util");
+var fs3 = __toESM(require("fs"));
 var execAsync = (0, import_util.promisify)(import_child_process.exec);
 var ZolaPublishPlugin = class extends import_obsidian5.Plugin {
   constructor() {
@@ -1224,15 +1225,27 @@ Start writing here...
       }
       new import_obsidian5.Notice("Publishing to GitHub...");
       const zolaRootPath = this.settings.zolaProjectPath.replace(/\/content\/posts\/?$/, "");
-      const commands = [
-        `cd "${zolaRootPath}"`,
-        "git add .",
-        `git commit -m "Update blog posts - ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}"`,
-        `git push origin ${this.settings.defaultBranch}`
-      ];
-      const fullCommand = commands.join(" && ");
+      if (!fs3.existsSync(zolaRootPath)) {
+        new import_obsidian5.Notice("Zola project root directory not found");
+        return;
+      }
       try {
-        const { stdout, stderr } = await execAsync(fullCommand);
+        await execAsync("git add .", { cwd: zolaRootPath });
+        let commitSuccess = false;
+        try {
+          await execAsync(`git commit -m "Update blog posts - ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}"`, { cwd: zolaRootPath });
+          commitSuccess = true;
+        } catch (commitError) {
+          const commitMsg = commitError instanceof Error ? commitError.message : "";
+          if (!commitMsg.includes("nothing to commit")) {
+            console.warn("Commit failed, but will try to push:", commitMsg);
+          }
+        }
+        try {
+          await execAsync(`git push origin ${this.settings.defaultBranch}`, { cwd: zolaRootPath });
+        } catch (pushError) {
+          throw pushError;
+        }
         new import_obsidian5.Notice("Published successfully! Code pushed to GitHub");
         await this.logManager.addLog({
           action: "publish",
@@ -1248,15 +1261,22 @@ Start writing here...
         }
       } catch (gitError) {
         console.error("Git command execution failed:", gitError);
-        if (gitError instanceof Error && gitError.message.includes("nothing to commit")) {
+        const errorMessage = gitError instanceof Error ? gitError.message : String(gitError);
+        if (errorMessage.includes("nothing to commit")) {
           new import_obsidian5.Notice("No new changes to commit");
-        } else {
-          throw gitError;
+          return;
         }
+        if (errorMessage.includes("src refspec") || errorMessage.includes("does not match any")) {
+          new import_obsidian5.Notice(`Branch "${this.settings.defaultBranch}" not found. Please check branch name in settings.`);
+          return;
+        }
+        new import_obsidian5.Notice(`Git command failed: ${errorMessage.split("\n")[0]}`);
+        throw gitError;
       }
     } catch (error) {
       console.error("Publishing failed:", error);
-      new import_obsidian5.Notice("Publishing failed, please check console or verify Git configuration");
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      new import_obsidian5.Notice(`Publishing failed: ${errorMsg.substring(0, 100)}`);
     }
   }
 };

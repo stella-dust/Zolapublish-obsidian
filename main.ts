@@ -6,6 +6,7 @@ import { SyncManager } from './src/syncManager';
 import { LogManager } from './src/logManager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as fs from 'fs';
 
 const execAsync = promisify(exec);
 
@@ -335,18 +336,37 @@ Start writing here...
 			// Get Zola project root directory
 			const zolaRootPath = this.settings.zolaProjectPath.replace(/\/content\/posts\/?$/, '');
 
-			// Execute git commands
-			const commands = [
-				`cd "${zolaRootPath}"`,
-				'git add .',
-				`git commit -m "Update blog posts - ${new Date().toISOString().split('T')[0]}"`,
-				`git push origin ${this.settings.defaultBranch}`
-			];
+			// Verify directory exists
+			if (!fs.existsSync(zolaRootPath)) {
+				new Notice('Zola project root directory not found');
+				return;
+			}
 
-			const fullCommand = commands.join(' && ');
-
+			// Execute git operations
 			try {
-				const { stdout, stderr } = await execAsync(fullCommand);
+				// Add all changes
+				await execAsync('git add .', { cwd: zolaRootPath });
+
+				// Try to commit (ignore if nothing to commit)
+				let commitSuccess = false;
+				try {
+					await execAsync(`git commit -m "Update blog posts - ${new Date().toISOString().split('T')[0]}"`, { cwd: zolaRootPath });
+					commitSuccess = true;
+				} catch (commitError) {
+					// Ignore "nothing to commit" error, but log others
+					const commitMsg = commitError instanceof Error ? commitError.message : '';
+					if (!commitMsg.includes('nothing to commit')) {
+						console.warn('Commit failed, but will try to push:', commitMsg);
+					}
+				}
+
+				// Push to remote (whether or not commit succeeded)
+				try {
+					await execAsync(`git push origin ${this.settings.defaultBranch}`, { cwd: zolaRootPath });
+				} catch (pushError) {
+					// If push fails, throw the error
+					throw pushError;
+				}
 
 				new Notice('Published successfully! Code pushed to GitHub');
 
@@ -368,16 +388,28 @@ Start writing here...
 			} catch (gitError) {
 				console.error('Git command execution failed:', gitError);
 
+				const errorMessage = gitError instanceof Error ? gitError.message : String(gitError);
+
 				// Check if error is due to no changes
-				if (gitError instanceof Error && gitError.message.includes('nothing to commit')) {
+				if (errorMessage.includes('nothing to commit')) {
 					new Notice('No new changes to commit');
-				} else {
-					throw gitError;
+					return;
 				}
+
+				// Check if error is due to branch mismatch
+				if (errorMessage.includes('src refspec') || errorMessage.includes('does not match any')) {
+					new Notice(`Branch "${this.settings.defaultBranch}" not found. Please check branch name in settings.`);
+					return;
+				}
+
+				// Show detailed error message
+				new Notice(`Git command failed: ${errorMessage.split('\n')[0]}`);
+				throw gitError;
 			}
 		} catch (error) {
 			console.error('Publishing failed:', error);
-			new Notice('Publishing failed, please check console or verify Git configuration');
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			new Notice(`Publishing failed: ${errorMsg.substring(0, 100)}`);
 		}
 	}
 }
